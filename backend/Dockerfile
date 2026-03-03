@@ -1,26 +1,28 @@
-# Use Node.js LTS Alpine image for smaller size
-FROM node:20-alpine
+# Use Node.js 20 Debian image (bullseye) for better compatibility with native modules like canvas
+FROM node:20-bullseye-slim
 
-# Install required system dependencies for native modules and Chromium for puppeteer
-RUN apk add --no-cache \
+# Install system dependencies for canvas and puppeteer
+RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
-    cairo-dev \
-    jpeg-dev \
-    pango-dev \
-    giflib-dev \
+    build-essential \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
     chromium \
-    chromium-chromedriver \
-    nss \
-    freetype \
-    harfbuzz \
+    libnss3 \
+    libfreetype6 \
+    libharfbuzz-bin \
     ca-certificates \
-    ttf-freefont
+    fonts-freefont-ttf \
+    && rm -rf /var/lib/apt/lists/*
 
-# Tell Puppeteer to use the installed Chromium
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+# Set environment variables for Puppeteer
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Set working directory
 WORKDIR /app
@@ -28,8 +30,10 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (including dev dependencies for ts-node)
-RUN npm ci && npm cache clean --force
+# Install dependencies
+# Using npm install instead of ci to ensure devDependencies (like ts-node) are installed if NODE_ENV is not production
+# Railway usually sets NODE_ENV=production, so we might need to force install dev dependencies or just use npm install which installs everything by default unless NODE_ENV=production
+RUN npm install
 
 # Copy application code
 COPY . .
