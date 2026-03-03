@@ -16,17 +16,20 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Stage 2: Serve with nginx
-FROM nginx:alpine
+# Stage 2: Serve with Node.js
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install serve globally
+RUN npm install -g serve
 
 # Copy built assets from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist ./dist
 
-# Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Expose port 3000 (serve default)
+EXPOSE 3000
 
-# Expose port 80
-EXPOSE 80
-
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start serve
+CMD ["serve", "-s", "dist", "-l", "3000"]
